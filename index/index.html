@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品油站维修管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<!-- 登录模态框 -->
+<div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-8 transform transition-all duration-300 scale-100">
+        <div class="text-center mb-6">
+            <i class="fas fa-industry text-blue-600 text-4xl mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-900">产品油站维修管理系统</h2>
+            <p class="text-gray-500 mt-2">请登录系统</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-user text-gray-400"></i>
+                    </div>
+                    <input type="text" id="username" name="username" required
+                           class="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入用户名">
+                </div>
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" id="password" name="password" required
+                           class="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入密码">
+                </div>
+            </div>
+
+            <div class="text-red-500 text-sm hidden" id="loginError">
+                用户名或密码错误，请重试
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                登录
+            </button>
+        </form>
+
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <p>可用账号：</p>
+            <p>管理员: admin / 123456</p>
+            <p>访客: guest / 123456</p>
+        </div>
+    </div>
+</div>
+
+<!-- 顶部导航 -->
+<nav class="bg-white shadow-sm border-b hidden" id="mainNav">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <i class="fas fa-industry text-blue-600 text-2xl mr-3"></i>
+                <h1 class="text-xl font-semibold text-gray-900">产品油站维修管理系统</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="stationsBtn" class="menu-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+                    <i class="fas fa-gas-pump mr-2"></i>油站管理
+                </button>
+                <button id="productsBtn" class="menu-btn px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
+                    <i class="fas fa-cogs mr-2"></i>产品管理
+                </button>
+                <button id="repairsBtn" class="menu-btn px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
+                    <i class="fas fa-wrench mr-2"></i>维修管理
+                </button>
+                <div class="flex items-center">
+                    <span id="currentUser" class="text-sm text-gray-700 mr-3"></span>
+                    <button id="logoutBtn" class="text-sm text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-sign-out-alt"></i> 退出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 主内容区 -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden" id="mainContent">
+    <!-- 数据概览 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm p-6 border transform transition-all hover:shadow-md">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-gas-pump text-blue-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">油站总数</p>
+                    <p class="text-2xl font-semibold text-gray-900" id="stationsCount">12</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6 border transform transition-all hover:shadow-md">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-cogs text-green-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">产品总数</p>
+                    <p class="text-2xl font-semibold text-gray-900" id="productsCount">17</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm p-6 border transform transition-all hover:shadow-md">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-wrench text-red-600 text-2xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">维修订单</p>
+                    <p class="text-2xl font-semibold text-gray-900" id="repairsCount">15</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮区域 -->
+    <div class="flex justify-between mb-6">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900" id="currentTitle">油站管理</h2>
+        </div>
+        <div class="flex space-x-3">
+            <label for="excelImport" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 cursor-pointer inline-flex items-center admin-only transition-colors">
+                <i class="fas fa-file-excel mr-2"></i>导入Excel
+                <input type="file" id="excelImport" accept=".xlsx,.xls" class="hidden">
+            </label>
+        </div>
+    </div>
+
+    <!-- 搜索和筛选区域 -->
+    <div id="searchFilterArea" class="bg-white rounded-lg shadow-sm p-6 border mb-8">
+        <!-- 油站搜索筛选 -->
+        <div id="stationsSearch" class="search-section">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label for="stationIdSearch" class="block text-sm font-medium text-gray-700 mb-1">油站ID</label>
+                    <input type="text" id="stationIdSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入油站ID">
+                </div>
+                <div>
+                    <label for="stationNameSearch" class="block text-sm font-medium text-gray-700 mb-1">油站名称</label>
+                    <input type="text" id="stationNameSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入油站名称">
+                </div>
+                <div>
+                    <label for="stationRegionSearch" class="block text-sm font-medium text-gray-700 mb-1">行政区域</label>
+                    <input type="text" id="stationRegionSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入区域">
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button id="searchStationsBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-search mr-2"></i>搜索
+                </button>
+                <button id="resetStationsBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-redo mr-2"></i>重置
+                </button>
+            </div>
+        </div>
+
+        <!-- 产品搜索筛选 -->
+        <div id="productsSearch" class="search-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                    <label for="productIdSearch" class="block text-sm font-medium text-gray-700 mb-1">产品序列号</label>
+                    <input type="text" id="productIdSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入产品序列号">
+                </div>
+                <div>
+                    <label for="productTypeSearch" class="block text-sm font-medium text-gray-700 mb-1">产品类别</label>
+                    <input type="text" id="productTypeSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入产品类别">
+                </div>
+                <div>
+                    <label for="productLineSearch" class="block text-sm font-medium text-gray-700 mb-1">产品线</label>
+                    <select id="productLineSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部</option>
+                        <option value="V">V系列</option>
+                        <option value="G">G系列</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="productStationSearch" class="block text-sm font-medium text-gray-700 mb-1">安装油站</label>
+                    <select id="productStationSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部油站</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button id="searchProductsBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-search mr-2"></i>搜索
+                </button>
+                <button id="resetProductsBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-redo mr-2"></i>重置
+                </button>
+            </div>
+        </div>
+
+        <!-- 维修搜索筛选 -->
+        <div id="repairsSearch" class="search-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                    <label for="repairIdSearch" class="block text-sm font-medium text-gray-700 mb-1">维修订单号</label>
+                    <input type="text" id="repairIdSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入维修订单号">
+                </div>
+                <div>
+                    <label for="repairProductSearch" class="block text-sm font-medium text-gray-700 mb-1">产品序列号</label>
+                    <input type="text" id="repairProductSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入产品序列号">
+                </div>
+                <div>
+                    <label for="repairStationSearch" class="block text-sm font-medium text-gray-700 mb-1">报修油站</label>
+                    <select id="repairStationSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部油站</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="repairStatusSearch" class="block text-sm font-medium text-gray-700 mb-1">维修进度</label>
+                    <select id="repairStatusSearch" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">全部进度</option>
+                        <option value="待处理">待处理</option>
+                        <option value="维修中">维修中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="已取消">已取消</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button id="searchRepairsBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-search mr-2"></i>搜索
+                </button>
+                <button id="resetRepairsBtn" class="ml-3 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                    <i class="fas fa-redo mr-2"></i>重置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据表格区域 -->
+    <div class="bg-white rounded-lg shadow-sm border">
+        <!-- 油站表格 -->
+        <div id="stationsTable" class="table-section">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">油站ID</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">油站名称</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">行政区域</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">油站地址</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">登记时间</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="stationsTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+                <div class="text-sm text-gray-700">显示 <span id="stationsDisplayCount">10</span> 条，共 <span id="stationsTotalCount">12</span> 条</div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">第 <span id="stationsCurrentPage">1</span> 页 / 共 <span id="stationsTotalPages">2</span> 页</span>
+                    <button id="prevStationsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextStationsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品表格 -->
+        <div id="productsTable" class="table-section hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">产品序列号</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">产品类别</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">产品线</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">安装油站</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">安装日期</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">质保到期日</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="productsTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+                <div class="text-sm text-gray-700">显示 <span id="productsDisplayCount">10</span> 条，共 <span id="productsTotalCount">17</span> 条</div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">第 <span id="productsCurrentPage">1</span> 页 / 共 <span id="productsTotalPages">2</span> 页</span>
+                    <button id="prevProductsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextProductsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 维修表格 -->
+        <div id="repairsTable" class="table-section hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">维修订单号</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">产品序列号</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">产品类别</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">报修油站</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申请时间</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">故障类别</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">维修进度</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                    </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="repairsTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+                <div class="text-sm text-gray-700">显示 <span id="repairsDisplayCount">10</span> 条，共 <span id="repairsTotalCount">15</span> 条</div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm text-gray-700">第 <span id="repairsCurrentPage">1</span> 页 / 共 <span id="repairsTotalPages">2</span> 页</span>
+                    <button id="prevRepairsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button id="nextRepairsBtn" class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- 详情模态框 -->
+<div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900">详情信息</h2>
+            <button id="closeModalBtn" class="text-gray-400 hover:text-gray-500 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="modalContent" class="p-6">
+            <!-- 详情内容将在这里动态生成 -->
+        </div>
+    </div>
+</div>
+
+<!-- 新增产品弹窗 -->
+<div id="addProductModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-900">新增产品</h2>
+            <button id="closeAddProductModal" class="text-gray-400 hover:text-gray-500 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="addProductForm">
+                <input type="hidden" id="productStationId">
+
+                <div class="mb-4">
+                    <label for="newProductSerial" class="block text-sm font-medium text-gray-700 mb-1">产品序列号 <span class="text-red-500">*</span></label>
+                    <input type="text" id="newProductSerial" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入产品序列号">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newProductTypeCode" class="block text-sm font-medium text-gray-700 mb-1">产品类别码 <span class="text-red-500">*</span></label>
+                    <input type="text" id="newProductTypeCode" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入产品类别码">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newProductTypeDesc" class="block text-sm font-medium text-gray-700 mb-1">类别描述 <span class="text-red-500">*</span></label>
+                    <input type="text" id="newProductTypeDesc" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入类别描述">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newProductLine" class="block text-sm font-medium text-gray-700 mb-1">产品线 <span class="text-red-500">*</span></label>
+                    <select id="newProductLine" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="V">V系列</option>
+                        <option value="G">G系列</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="newProductInstallDate" class="block text-sm font-medium text-gray-700 mb-1">安装日期 <span class="text-red-500">*</span></label>
+                    <input type="date" id="newProductInstallDate" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newProductWarrantyDate" class="block text-sm font-medium text-gray-700 mb-1">质保到期日 <span class="text-red-500">*</span></label>
+                    <input type="date" id="newProductWarrantyDate" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancelAddProduct" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 新增维修弹窗 -->
+<div id="addRepairModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-900">新增维修订单</h2>
+            <button id="closeAddRepairModal" class="text-gray-400 hover:text-gray-500 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="addRepairForm">
+                <input type="hidden" id="repairProductSerial">
+                <input type="hidden" id="repairProductType">
+
+                <div class="mb-4">
+                    <label for="newRepairId" class="block text-sm font-medium text-gray-700 mb-1">维修订单号 <span class="text-red-500">*</span></label>
+                    <input type="text" id="newRepairId" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="输入维修订单号">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newRepairStation" class="block text-sm font-medium text-gray-700 mb-1">报修油站 <span class="text-red-500">*</span></label>
+                    <select id="newRepairStation" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">选择油站</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="newRepairDate" class="block text-sm font-medium text-gray-700 mb-1">申请时间 <span class="text-red-500">*</span></label>
+                    <input type="date" id="newRepairDate" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label for="newRepairFaultType" class="block text-sm font-medium text-gray-700 mb-1">故障类别 <span class="text-red-500">*</span></label>
+                    <select id="newRepairFaultType" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="人为损坏">人为损坏</option>
+                        <option value="自然灾害">自然灾害</option>
+                        <option value="电气故障">电气故障</option>
+                        <option value="软件故障">软件故障</option>
+                        <option value="机械故障">机械故障</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="newRepairDescription" class="block text-sm font-medium text-gray-700 mb-1">故障描述 <span class="text-red-500">*</span></label>
+                    <textarea id="newRepairDescription" rows="3" required
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="输入故障描述"></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label for="newRepairStatus" class="block text-sm font-medium text-gray-700 mb-1">维修进度 <span class="text-red-500">*</span></label>
+                    <select id="newRepairStatus" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="待处理">待处理</option>
+                        <option value="维修中">维修中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="已取消">已取消</option>
+                    </select>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancelAddRepair" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 维修状态编辑弹窗 -->
+<div id="editRepairModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-900">修改维修状态</h2>
+            <button id="closeEditRepairModal" class="text-gray-400 hover:text-gray-500 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="editRepairForm">
+                <input type="hidden" id="editRepairId">
+
+                <div class="mb-6">
+                    <label for="editRepairStatus" class="block text-sm font-medium text-gray-700 mb-1">维修进度 <span class="text-red-500">*</span></label>
+                    <select id="editRepairStatus" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="待处理">待处理</option>
+                        <option value="维修中">维修中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="已取消">已取消</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="editRepairDescription" class="block text-sm font-medium text-gray-700 mb-1">维修备注</label>
+                    <textarea id="editRepairDescription" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="输入维修备注信息"></textarea>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" id="cancelEditRepair" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 模块化封装系统
+    const StationManagementSystem = (() => {
+        // 私有变量
+        let currentUser = null;
+        let userRole = null; // 'admin' 或 'guest'
+        let currentPage = {
+            stations: 1,
+            products: 1,
+            repairs: 1
+        };
+        const pageSize = 10;
+
+        // DOM元素缓存
+        const elements = {
+            loginModal: document.getElementById('loginModal'),
+            mainNav: document.getElementById('mainNav'),
+            mainContent: document.getElementById('mainContent'),
+            currentUser: document.getElementById('currentUser'),
+            currentTitle: document.getElementById('currentTitle'),
+            loginForm: document.getElementById('loginForm'),
+            loginError: document.getElementById('loginError'),
+            logoutBtn: document.getElementById('logoutBtn'),
+            detailModal: document.getElementById('detailModal'),
+            modalTitle: document.getElementById('modalTitle'),
+            modalContent: document.getElementById('modalContent'),
+            closeModalBtn: document.getElementById('closeModalBtn'),
+
+            // 新增产品相关
+            addProductModal: document.getElementById('addProductModal'),
+            addProductForm: document.getElementById('addProductForm'),
+            closeAddProductModal: document.getElementById('closeAddProductModal'),
+            cancelAddProduct: document.getElementById('cancelAddProduct'),
+            productStationId: document.getElementById('productStationId'),
+
+            // 新增维修相关
+            addRepairModal: document.getElementById('addRepairModal'),
+            addRepairForm: document.getElementById('addRepairForm'),
+            closeAddRepairModal: document.getElementById('closeAddRepairModal'),
+            cancelAddRepair: document.getElementById('cancelAddRepair'),
+            repairProductSerial: document.getElementById('repairProductSerial'),
+            newRepairStation: document.getElementById('newRepairStation'),
+
+            // 编辑维修相关
+            editRepairModal: document.getElementById('editRepairModal'),
+            editRepairForm: document.getElementById('editRepairForm'),
+            closeEditRepairModal: document.getElementById('closeEditRepairModal'),
+            cancelEditRepair: document.getElementById('cancelEditRepair'),
+            editRepairId: document.getElementById('editRepairId'),
+            editRepairStatus: document.getElementById('editRepairStatus'),
+
+            // 表格相关
+            stationsTableBody: document.getElementById('stationsTableBody'),
+            productsTableBody: document.getElementById('productsTableBody'),
+            repairsTableBody: document.getElementById('repairsTableBody'),
+
+            // 分页相关
+            stationsCurrentPage: document.getElementById('stationsCurrentPage'),
+            stationsTotalPages: document.getElementById('stationsTotalPages'),
+            prevStationsBtn: document.getElementById('prevStationsBtn'),
+            nextStationsBtn: document.getElementById('nextStationsBtn'),
+
+            productsCurrentPage: document.getElementById('productsCurrentPage'),
+            productsTotalPages: document.getElementById('productsTotalPages'),
+            prevProductsBtn: document.getElementById('prevProductsBtn'),
+            nextProductsBtn: document.getElementById('nextProductsBtn'),
+
+            repairsCurrentPage: document.getElementById('repairsCurrentPage'),
+            repairsTotalPages: document.getElementById('repairsTotalPages'),
+            prevRepairsBtn: document.getElementById('prevRepairsBtn'),
+            nextRepairsBtn: document.getElementById('nextRepairsBtn'),
+
+            // 搜索相关
+            stationIdSearch: document.getElementById('stationIdSearch'),
+            stationNameSearch: document.getElementById('stationNameSearch'),
+            stationRegionSearch: document.getElementById('stationRegionSearch'),
+            searchStationsBtn: document.getElementById('searchStationsBtn'),
+            resetStationsBtn: document.getElementById('resetStationsBtn'),
+
+            productIdSearch: document.getElementById('productIdSearch'),
+            productTypeSearch: document.getElementById('productTypeSearch'),
+            productLineSearch: document.getElementById('productLineSearch'),
+            productStationSearch: document.getElementById('productStationSearch'),
+            searchProductsBtn: document.getElementById('searchProductsBtn'),
+            resetProductsBtn: document.getElementById('resetProductsBtn'),
+
+            repairIdSearch: document.getElementById('repairIdSearch'),
+            repairProductSearch: document.getElementById('repairProductSearch'),
+            repairStationSearch: document.getElementById('repairStationSearch'),
+            repairStatusSearch: document.getElementById('repairStatusSearch'),
+            searchRepairsBtn: document.getElementById('searchRepairsBtn'),
+            resetRepairsBtn: document.getElementById('resetRepairsBtn'),
+
+            // 导航按钮
+            stationsBtn: document.getElementById('stationsBtn'),
+            productsBtn: document.getElementById('productsBtn'),
+            repairsBtn: document.getElementById('repairsBtn')
+        };
+
+        // 数据模块
+        const Data = {
+            stations: [
+                {"油站ID": "S001", "油站名称": "中国石油北京第1加油站", "行政区域": "北京-朝阳区", "油站地址": "北京朝阳区建国路101号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-03-15"},
+                {"油站ID": "S002", "油站名称": "中国石油上海第2加油站", "行政区域": "上海-浦东区", "油站地址": "上海浦东区张江路202号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-05-22"},
+                {"油站ID": "S003", "油站名称": "中国石油广州第3加油站", "行政区域": "广东-天河区", "油站地址": "广州天河区天河路303号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-01-10"},
+                {"油站ID": "S004", "油站名称": "中国石油深圳第4加油站", "行政区域": "广东-南山区", "油站地址": "深圳南山区科技园路404号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-07-08"},
+                {"油站ID": "S005", "油站名称": "中国石油杭州第5加油站", "行政区域": "浙江-西湖区", "油站地址": "杭州西湖区西湖路505号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-04-19"},
+                {"油站ID": "S006", "油站名称": "中国石油成都第6加油站", "行政区域": "四川-武侯区", "油站地址": "成都武侯区天府大道606号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-02-28"},
+                {"油站ID": "S007", "油站名称": "中国石油重庆第7加油站", "行政区域": "重庆-渝中区", "油站地址": "重庆渝中区解放碑707号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-06-14"},
+                {"油站ID": "S008", "油站名称": "中国石油武汉第8加油站", "行政区域": "湖北-武昌区", "油站地址": "武汉武昌区珞喻路808号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-03-05"},
+                {"油站ID": "S009", "油站名称": "中国石油西安第9加油站", "行政区域": "陕西-雁塔区", "油站地址": "西安雁塔区长安路909号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-05-11"},
+                {"油站ID": "S010", "油站名称": "中国石油南京第10加油站", "行政区域": "江苏-玄武区", "油站地址": "南京玄武区中山路1010号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-01-25"},
+                {"油站ID": "S011", "油站名称": "中国石油青岛第11加油站", "行政区域": "山东-市南区", "油站地址": "青岛市南区香港中路111号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-08-30"},
+                {"油站ID": "S012", "油站名称": "中国石油大连第12加油站", "行政区域": "辽宁-中山区", "油站地址": "大连中山区人民路121号", "所属企业": "中国石油天然气股份有限公司", "登记时间": "2022-09-15"}
+            ],
+
+            products: [
+                {"产品序列号": "P00001", "产品类别码": "PT43", "类别描述": "便利店设备", "产品线": "V", "安装供应商": "中海油技术服务", "安装日期": "2023-02-18", "安装油站": "S003", "安装人员": "安装工张5", "质保到期日": "2025-02-18", "油站名称": "中国石油广州第3加油站"},
+                {"产品序列号": "P00002", "产品类别码": "PT76", "类别描述": "监控设备", "产品线": "G", "安装供应商": "中石油装备公司", "安装日期": "2023-04-05", "安装油站": "S008", "安装人员": "安装工李3", "质保到期日": "2025-04-05", "油站名称": "中国石油武汉第8加油站"},
+                {"产品序列号": "P00003", "产品类别码": "PT34", "类别描述": "监控设备", "产品线": "V", "安装供应商": "中石化设备公司", "安装日期": "2023-01-22", "安装油站": "S001", "安装人员": "安装工王8", "质保到期日": "2025-01-22", "油站名称": "中国石油北京第1加油站"},
+                {"产品序列号": "P00004", "产品类别码": "PT91", "类别描述": "加油机", "产品线": "G", "安装供应商": "徐工集团", "安装日期": "2023-03-14", "安装油站": "S006", "安装人员": "安装工赵1", "质保到期日": "2025-03-14", "油站名称": "中国石油成都第6加油站"},
+                {"产品序列号": "P00005", "产品类别码": "PT22", "类别描述": "油罐", "产品线": "V", "安装供应商": "三一重工", "安装日期": "2023-05-27", "安装油站": "S004", "安装人员": "安装工刘6", "质保到期日": "2025-05-27", "油站名称": "中国石油深圳第4加油站"},
+                {"产品序列号": "P00006", "产品类别码": "PT58", "类别描述": "安防系统", "产品线": "G", "安装供应商": "中石油装备公司", "安装日期": "2023-02-08", "安装油站": "S009", "安装人员": "安装工张2", "质保到期日": "2025-02-08", "油站名称": "中国石油西安第9加油站"},
+                {"产品序列号": "P00007", "产品类别码": "PT87", "类别描述": "加油机", "产品线": "V", "安装供应商": "中石化设备公司", "安装日期": "2023-04-19", "安装油站": "S002", "安装人员": "安装工李7", "质保到期日": "2025-04-19", "油站名称": "中国石油上海第2加油站"},
+                {"产品序列号": "P00008", "产品类别码": "PT19", "类别描述": "便利店设备", "产品线": "G", "安装供应商": "中海油技术服务", "安装日期": "2023-03-03", "安装油站": "S007", "安装人员": "安装工王4", "质保到期日": "2025-03-03", "油站名称": "中国石油重庆第7加油站"},
+                {"产品序列号": "P00009", "产品类别码": "PT65", "类别描述": "监控设备", "产品线": "V", "安装供应商": "徐工集团", "安装日期": "2023-05-11", "安装油站": "S005", "安装人员": "安装工赵9", "质保到期日": "2025-05-11", "油站名称": "中国石油杭州第5加油站"},
+                {"产品序列号": "P00010", "产品类别码": "PT42", "类别描述": "油罐", "产品线": "G", "安装供应商": "三一重工", "安装日期": "2023-01-30", "安装油站": "S010", "安装人员": "安装工刘2", "质保到期日": "2025-01-30", "油站名称": "中国石油南京第10加油站"},
+                {"产品序列号": "P00011", "产品类别码": "PT78", "类别描述": "安防系统", "产品线": "V", "安装供应商": "中石油装备公司", "安装日期": "2023-02-22", "安装油站": "S003", "安装人员": "安装工张6", "质保到期日": "2025-02-22", "油站名称": "中国石油广州第3加油站"},
+                {"产品序列号": "P00012", "产品类别码": "PT31", "类别描述": "加油机", "产品线": "G", "安装供应商": "中石化设备公司", "安装日期": "2023-04-09", "安装油站": "S001", "安装人员": "安装工李1", "质保到期日": "2025-04-09", "油站名称": "中国石油北京第1加油站"},
+                {"产品序列号": "P00013", "产品类别码": "PT83", "类别描述": "便利店设备", "产品线": "V", "安装供应商": "中海油技术服务", "安装日期": "2023-03-17", "安装油站": "S008", "安装人员": "安装工王3", "质保到期日": "2025-03-17", "油站名称": "中国石油武汉第8加油站"},
+                {"产品序列号": "P00014", "产品类别码": "PT27", "类别描述": "监控设备", "产品线": "G", "安装供应商": "徐工集团", "安装日期": "2023-05-05", "安装油站": "S006", "安装人员": "安装工赵5", "质保到期日": "2025-05-05", "油站名称": "中国石油成都第6加油站"},
+                {"产品序列号": "P00015", "产品类别码": "PT54", "类别描述": "油罐", "产品线": "V", "安装供应商": "三一重工", "安装日期": "2023-02-12", "安装油站": "S004", "安装人员": "安装工刘8", "质保到期日": "2025-02-12", "油站名称": "中国石油深圳第4加油站"},
+                {"产品序列号": "P00016", "产品类别码": "PT61", "类别描述": "加油机", "产品线": "V", "安装供应商": "徐工集团", "安装日期": "2023-06-15", "安装油站": "S011", "安装人员": "安装工孙3", "质保到期日": "2025-06-15", "油站名称": "中国石油青岛第11加油站"},
+                {"产品序列号": "P00017", "产品类别码": "PT72", "类别描述": "监控设备", "产品线": "G", "安装供应商": "中石化设备公司", "安装日期": "2023-07-20", "安装油站": "S012", "安装人员": "安装工周5", "质保到期日": "2025-07-20", "油站名称": "中国石油大连第12加油站"}
+            ],
+
+            repairs: [
+                {"维修订单号": "R0001", "申请维修时间": "2023-08-15", "报修油站": "S004", "报修产品序列号": "P00015", "维修服务商": "原厂维修服务", "故障类别": "人为损坏", "故障描述": "漏油，需要更换部件", "维修进度": "已完成", "是否换件": "是", "坏件收到时间": "2023-08-22", "产品类别": "油罐", "油站名称": "中国石油深圳第4加油站"},
+                {"维修订单号": "R0002", "申请维修时间": "2023-09-03", "报修油站": "S002", "报修产品序列号": "P00007", "维修服务商": "中石化技术服务", "故障类别": "自然灾害", "故障描述": "无法启动，需要系统升级", "维修进度": "待处理", "是否换件": "否", "坏件收到时间": "", "产品类别": "加油机", "油站名称": "中国石油上海第2加油站"},
+                {"维修订单号": "R0003", "申请维修时间": "2023-07-22", "报修油站": "S008", "报修产品序列号": "P00013", "维修服务商": "专业维修公司A", "故障类别": "电气故障", "故障描述": "显示屏故障，需要更换部件", "维修进度": "维修中", "是否换件": "是", "坏件收到时间": "2023-07-29", "产品类别": "便利店设备", "油站名称": "中国石油武汉第8加油站"},
+                {"维修订单号": "R0004", "申请维修时间": "2023-08-10", "报修油站": "S001", "报修产品序列号": "P00003", "维修服务商": "中石油维修中心", "故障类别": "软件故障", "故障描述": "通信中断，需要系统升级", "维修进度": "已完成", "是否换件": "否", "坏件收到时间": "", "产品类别": "监控设备", "油站名称": "中国石油北京第1加油站"},
+                {"维修订单号": "R0005", "申请维修时间": "2023-09-18", "报修油站": "S006", "报修产品序列号": "P00014", "维修服务商": "专业维修公司B", "故障类别": "机械故障", "故障描述": "噪音过大，需要重新校准", "维修进度": "维修中", "是否换件": "否", "坏件收到时间": "", "产品类别": "监控设备", "油站名称": "中国石油成都第6加油站"},
+                {"维修订单号": "R0006", "申请维修时间": "2023-07-29", "报修油站": "S003", "报修产品序列号": "P00001", "维修服务商": "原厂维修服务", "故障类别": "人为损坏", "故障描述": "计量不准，需要重新校准", "维修进度": "已完成", "是否换件": "否", "坏件收到时间": "", "产品类别": "便利店设备", "油站名称": "中国石油广州第3加油站"},
+                {"维修订单号": "R0007", "申请维修时间": "2023-08-05", "报修油站": "S005", "报修产品序列号": "P00009", "维修服务商": "中石油维修中心", "故障类别": "电气故障", "故障描述": "温度异常，需要线路检修", "维修进度": "已完成", "是否换件": "是", "坏件收到时间": "2023-08-12", "产品类别": "监控设备", "油站名称": "中国石油杭州第5加油站"},
+                {"维修订单号": "R0008", "申请维修时间": "2023-09-12", "报修油站": "S009", "报修产品序列号": "P00006", "维修服务商": "中石化技术服务", "故障类别": "软件故障", "故障描述": "通信中断，需要系统升级", "维修进度": "待处理", "是否换件": "否", "坏件收到时间": "", "产品类别": "安防系统", "油站名称": "中国石油西安第9加油站"},
+                {"维修订单号": "R0009", "申请维修时间": "2023-08-22", "报修油站": "S007", "报修产品序列号": "P00008", "维修服务商": "专业维修公司A", "故障类别": "机械故障", "故障描述": "无法启动，需要清洁维护", "维修进度": "已完成", "是否换件": "否", "坏件收到时间": "", "产品类别": "便利店设备", "油站名称": "中国石油重庆第7加油站"},
+                {"维修订单号": "R0010", "申请维修时间": "2023-09-08", "报修油站": "S010", "报修产品序列号": "P00010", "维修服务商": "专业维修公司B", "故障类别": "人为损坏", "故障描述": "漏油，需要更换部件", "维修进度": "维修中", "是否换件": "是", "坏件收到时间": "2023-09-15", "产品类别": "油罐", "油站名称": "中国石油南京第10加油站"},
+                {"维修订单号": "R0011", "申请维修时间": "2023-07-15", "报修油站": "S003", "报修产品序列号": "P00011", "维修服务商": "原厂维修服务", "故障类别": "自然灾害", "故障描述": "显示屏故障，需要更换部件", "维修进度": "已完成", "是否换件": "是", "坏件收到时间": "2023-07-22", "产品类别": "安防系统", "油站名称": "中国石油广州第3加油站"},
+                {"维修订单号": "R0012", "申请维修时间": "2023-08-29", "报修油站": "S001", "报修产品序列号": "P00012", "维修服务商": "中石油维修中心", "故障类别": "电气故障", "故障描述": "计量不准，需要重新校准", "维修进度": "待处理", "是否换件": "否", "坏件收到时间": "", "产品类别": "加油机", "油站名称": "中国石油北京第1加油站"},
+                {"维修订单号": "R0013", "申请维修时间": "2023-09-25", "报修油站": "S011", "报修产品序列号": "P00016", "维修服务商": "徐工集团服务部", "故障类别": "机械故障", "故障描述": "出油口堵塞", "维修进度": "待处理", "是否换件": "是", "坏件收到时间": "", "产品类别": "加油机", "油站名称": "中国石油青岛第11加油站"},
+                {"维修订单号": "R0014", "申请维修时间": "2023-09-30", "报修油站": "S012", "报修产品序列号": "P00017", "维修服务商": "中石化技术服务", "故障类别": "电气故障", "故障描述": "摄像头无信号", "维修进度": "维修中", "是否换件": "是", "坏件收到时间": "2023-10-05", "产品类别": "监控设备", "油站名称": "中国石油大连第12加油站"},
+                {"维修订单号": "R0015", "申请维修时间": "2023-10-02", "报修油站": "S005", "报修产品序列号": "P00009", "维修服务商": "徐工集团服务部", "故障类别": "软件故障", "故障描述": "画面卡顿", "维修进度": "待处理", "是否换件": "否", "坏件收到时间": "", "产品类别": "监控设备", "油站名称": "中国石油杭州第5加油站"}
+            ],
+
+            // 筛选数据
+            filterData(list, filters) {
+                return list.filter(item => {
+                    return Object.entries(filters).every(([key, value]) => {
+                        if (!value) return true;
+                        return String(item[key]).toLowerCase().includes(String(value).toLowerCase());
+                    });
+                });
+            },
+
+            // 分页处理
+            paginateData(list, page, pageSize) {
+                const start = (page - 1) * pageSize;
+                const end = start + pageSize;
+                return list.slice(start, end);
+            },
+
+            // 添加新产品
+            addProduct(productData) {
+                this.products.push(productData);
+                // 更新产品总数显示
+                document.getElementById('productsCount').textContent = this.products.length;
+            },
+
+            // 添加新维修
+            addRepair(repairData) {
+                this.repairs.push(repairData);
+                // 更新维修总数显示
+                document.getElementById('repairsCount').textContent = this.repairs.length;
+            },
+
+            // 更新维修状态
+            updateRepairStatus(id, status, remark) {
+                const repair = this.repairs.find(r => r['维修订单号'] === id);
+                if (repair) {
+                    repair['维修进度'] = status;
+                    if (remark) repair['维修备注'] = remark;
+                }
+            }
+        };
+
+        // 认证模块
+        const Auth = {
+            login(username, password) {
+                if ((username === 'admin' && password === '123456') ||
+                    (username === 'guest' && password === '123456')) {
+                    currentUser = username;
+                    userRole = username === 'admin' ? 'admin' : 'guest';
+                    return true;
+                }
+                return false;
+            },
+
+            logout() {
+                currentUser = null;
+                userRole = null;
+            },
+
+            isAdmin() {
+                return userRole === 'admin';
+            }
+        };
+
+        // UI渲染模块
+        const UI = {
+            // 显示模态框通用方法
+            showModal(modalId) {
+                const modal = document.getElementById(modalId);
+                modal.classList.remove('hidden');
+                // 触发动画
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            },
+
+            // 隐藏模态框通用方法
+            hideModal(modalId) {
+                const modal = document.getElementById(modalId);
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.add('scale-95');
+                // 等待动画完成后隐藏
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            },
+
+            // 切换到不同的管理区域
+            switchSection(section) {
+                // 更新标题
+                elements.currentTitle.textContent =
+                    section === 'stations' ? '油站管理' :
+                        section === 'products' ? '产品管理' : '维修管理';
+
+                // 更新导航按钮样式
+                document.querySelectorAll('.menu-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('text-gray-700', 'hover:bg-gray-100');
+                });
+                elements[`${section}Btn`].classList.remove('text-gray-700', 'hover:bg-gray-100');
+                elements[`${section}Btn`].classList.add('bg-blue-600', 'text-white');
+
+                // 显示对应的搜索区域
+                document.querySelectorAll('.search-section').forEach(elem => {
+                    elem.classList.add('hidden');
+                });
+                document.getElementById(`${section}Search`).classList.remove('hidden');
+
+                // 显示对应的表格
+                document.querySelectorAll('.table-section').forEach(elem => {
+                    elem.classList.add('hidden');
+                });
+                document.getElementById(`${section}Table`).classList.remove('hidden');
+
+                // 加载对应的数据
+                if (section === 'stations') {
+                    this.loadStationsData();
+                } else if (section === 'products') {
+                    this.loadProductsData();
+                } else if (section === 'repairs') {
+                    this.loadRepairsData();
+                }
+            },
+
+            // 加载油站数据
+            loadStationsData(filteredData = null) {
+                const data = filteredData || Data.stations;
+                const tableBody = elements.stationsTableBody;
+                const totalCount = data.length;
+                const totalPages = Math.ceil(totalCount / pageSize);
+                const startIndex = (currentPage.stations - 1) * pageSize;
+                const endIndex = Math.min(startIndex + pageSize, totalCount);
+                const pageData = Data.paginateData(data, currentPage.stations, pageSize);
+
+                // 清空表格
+                tableBody.innerHTML = '';
+
+                // 使用DocumentFragment优化性能
+                const fragment = document.createDocumentFragment();
+
+                // 填充表格数据
+                pageData.forEach(station => {
+                    const row = document.createElement('tr');
+                    row.dataset.stationId = station['油站ID'];
+                    row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">${station['油站ID']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${station['油站名称']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${station['行政区域']}</td>
+                            <td class="px-6 py-4">${station['油站地址']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${station['登记时间']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <button class="view-detail text-blue-600 hover:text-blue-900 mr-3 transition-colors" data-type="station" data-id="${station['油站ID']}">
+                                    <i class="fas fa-eye"></i> 查看
+                                </button>
+                                ${Auth.isAdmin() ? `
+                                    <button class="add-product text-green-600 hover:text-green-900 mr-3 transition-colors" data-station-id="${station['油站ID']}" data-station-name="${station['油站名称']}">
+                                        <i class="fas fa-plus-circle"></i> 新增产品
+                                    </button>
+                                    <button class="edit-item text-yellow-600 hover:text-yellow-900 transition-colors">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                ` : ''}
+                            </td>
+                        `;
+                    fragment.appendChild(row);
+                });
+
+                tableBody.appendChild(fragment);
+
+                // 更新分页信息
+                document.getElementById('stationsDisplayCount').textContent = pageData.length;
+                document.getElementById('stationsTotalCount').textContent = totalCount;
+                elements.stationsCurrentPage.textContent = currentPage.stations;
+                elements.stationsTotalPages.textContent = totalPages;
+
+                // 更新分页按钮状态
+                elements.prevStationsBtn.disabled = currentPage.stations <= 1;
+                elements.nextStationsBtn.disabled = currentPage.stations >= totalPages;
+            },
+
+            // 加载产品数据
+            loadProductsData(filteredData = null) {
+                const data = filteredData || Data.products;
+                const tableBody = elements.productsTableBody;
+                const totalCount = data.length;
+                const totalPages = Math.ceil(totalCount / pageSize);
+                const pageData = Data.paginateData(data, currentPage.products, pageSize);
+
+                // 清空表格
+                tableBody.innerHTML = '';
+
+                // 使用DocumentFragment优化性能
+                const fragment = document.createDocumentFragment();
+
+                // 填充表格数据
+                pageData.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.dataset.productSerial = product['产品序列号'];
+                    row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">${product['产品序列号']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${product['类别描述']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${product['产品线']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${product['油站名称']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${product['安装日期']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${product['质保到期日']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <button class="view-detail text-blue-600 hover:text-blue-900 mr-3 transition-colors" data-type="product" data-id="${product['产品序列号']}">
+                                    <i class="fas fa-eye"></i> 查看
+                                </button>
+                                ${Auth.isAdmin() ? `
+                                    <button class="add-repair text-green-600 hover:text-green-900 mr-3 transition-colors"
+                                            data-product-serial="${product['产品序列号']}"
+                                            data-product-type="${product['类别描述']}"
+                                            data-station-id="${product['安装油站']}">
+                                        <i class="fas fa-plus-circle"></i> 新增维修
+                                    </button>
+                                    <button class="edit-item text-yellow-600 hover:text-yellow-900 transition-colors">
+                                        <i class="fas fa-edit"></i> 编辑
+                                    </button>
+                                ` : ''}
+                            </td>
+                        `;
+                    fragment.appendChild(row);
+                });
+
+                tableBody.appendChild(fragment);
+
+                // 更新分页信息
+                document.getElementById('productsDisplayCount').textContent = pageData.length;
+                document.getElementById('productsTotalCount').textContent = totalCount;
+                elements.productsCurrentPage.textContent = currentPage.products;
+                elements.productsTotalPages.textContent = totalPages;
+
+                // 更新分页按钮状态
+                elements.prevProductsBtn.disabled = currentPage.products <= 1;
+                elements.nextProductsBtn.disabled = currentPage.products >= totalPages;
+            },
+
+            // 加载维修数据
+            loadRepairsData(filteredData = null) {
+                const data = filteredData || Data.repairs;
+                const tableBody = elements.repairsTableBody;
+                const totalCount = data.length;
+                const totalPages = Math.ceil(totalCount / pageSize);
+                const pageData = Data.paginateData(data, currentPage.repairs, pageSize);
+
+                // 清空表格
+                tableBody.innerHTML = '';
+
+                // 使用DocumentFragment优化性能
+                const fragment = document.createDocumentFragment();
+
+                // 填充表格数据
+                pageData.forEach(repair => {
+                    // 根据维修进度设置不同的颜色
+                    let statusClass = '';
+                    switch(repair['维修进度']) {
+                        case '待处理':
+                            statusClass = 'text-yellow-600';
+                            break;
+                        case '维修中':
+                            statusClass = 'text-blue-600';
+                            break;
+                        case '已完成':
+                            statusClass = 'text-green-600';
+                            break;
+                        case '已取消':
+                            statusClass = 'text-gray-500';
+                            break;
+                    }
+
+                    const row = document.createElement('tr');
+                    row.dataset.repairId = repair['维修订单号'];
+                    row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['维修订单号']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['报修产品序列号']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['产品类别']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['油站名称']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['申请维修时间']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${repair['故障类别']}</td>
+                            <td class="px-6 py-4 whitespace-nowrap"><span class="${statusClass}">${repair['维修进度']}</span></td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <button class="view-detail text-blue-600 hover:text-blue-900 mr-3 transition-colors" data-type="repair" data-id="${repair['维修订单号']}">
+                                    <i class="fas fa-eye"></i> 查看
+                                </button>
+                                ${Auth.isAdmin() ? `
+                                    <button class="edit-repair text-yellow-600 hover:text-yellow-900 transition-colors"
+                                            data-repair-id="${repair['维修订单号']}"
+                                            data-status="${repair['维修进度']}">
+                                        <i class="fas fa-edit"></i> 编辑状态
+                                    </button>
+                                ` : ''}
+                            </td>
+                        `;
+                    fragment.appendChild(row);
+                });
+
+                tableBody.appendChild(fragment);
+
+                // 更新分页信息
+                document.getElementById('repairsDisplayCount').textContent = pageData.length;
+                document.getElementById('repairsTotalCount').textContent = totalCount;
+                elements.repairsCurrentPage.textContent = currentPage.repairs;
+                elements.repairsTotalPages.textContent = totalPages;
+
+                // 更新分页按钮状态
+                elements.prevRepairsBtn.disabled = currentPage.repairs <= 1;
+                elements.nextRepairsBtn.disabled = currentPage.repairs >= totalPages;
+            },
+
+            // 显示详情
+            showDetail(type, id) {
+                let data, title;
+
+                // 根据类型获取数据
+                if (type === 'station') {
+                    data = Data.stations.find(item => item['油站ID'] === id);
+                    title = `油站详情 - ${data['油站名称']}`;
+                } else if (type === 'product') {
+                    data = Data.products.find(item => item['产品序列号'] === id);
+                    title = `产品详情 - ${data['产品序列号']}`;
+                } else if (type === 'repair') {
+                    data = Data.repairs.find(item => item['维修订单号'] === id);
+                    title = `维修详情 - ${data['维修订单号']}`;
+                }
+
+                // 设置模态框标题
+                elements.modalTitle.textContent = title;
+
+                // 生成详情内容
+                let contentHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+                for (const [key, value] of Object.entries(data)) {
+                    contentHtml += `
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">${key}</p>
+                                <p class="text-base text-gray-900 mt-1">${value || '-'}</p>
+                            </div>
+                        `;
+                }
+                contentHtml += '</div>';
+
+                // 添加操作按钮（仅管理员可见）
+                if (Auth.isAdmin()) {
+                    contentHtml += `
+                            <div class="mt-6 flex justify-end space-x-3">
+                                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors" id="closeDetailBtn">
+                                    关闭
+                                </button>
+                                <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-edit mr-2"></i>编辑
+                                </button>
+                            </div>
+                        `;
+                } else {
+                    contentHtml += `
+                            <div class="mt-6 flex justify-end">
+                                <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors" id="closeDetailBtn">
+                                    关闭
+                                </button>
+                            </div>
+                        `;
+                }
+
+                // 设置模态框内容
+                elements.modalContent.innerHTML = contentHtml;
+
+                // 显示模态框
+                this.showModal('detailModal');
+
+                // 绑定关闭按钮事件
+                document.getElementById('closeDetailBtn').addEventListener('click', () => {
+                    this.hideModal('detailModal');
+                });
+            }
+        };
+
+        // 初始化油站下拉列表
+        function initStationDropdowns() {
+            // 为产品和维修的油站筛选下拉框添加选项
+            Data.stations.forEach(station => {
+                // 产品筛选下拉框
+                const option1 = document.createElement('option');
+                option1.value = station['油站ID'];
+                option1.textContent = station['油站名称'];
+                elements.productStationSearch.appendChild(option1);
+
+                // 维修筛选下拉框
+                const option2 = document.createElement('option');
+                option2.value = station['油站ID'];
+                option2.textContent = station['油站名称'];
+                elements.repairStationSearch.appendChild(option2);
+
+                // 新增维修的油站下拉框
+                const option3 = document.createElement('option');
+                option3.value = station['油站ID'];
+                option3.textContent = station['油站名称'];
+                elements.newRepairStation.appendChild(option3);
+            });
+        }
+
+        // 绑定事件
+        function bindEvents() {
+            // 登录表单提交
+            elements.loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                if (Auth.login(username, password)) {
+                    // 登录成功
+                    elements.loginModal.classList.add('hidden');
+                    elements.mainNav.classList.remove('hidden');
+                    elements.mainContent.classList.remove('hidden');
+                    elements.currentUser.textContent = currentUser === 'admin' ? '管理员' : '访客';
+
+                    // 根据权限控制功能
+                    if (Auth.isAdmin()) {
+                        document.querySelectorAll('.admin-only').forEach(elem => {
+                            elem.classList.remove('hidden');
+                        });
+                    }
+
+                    // 初始化页面数据
+                    UI.switchSection('stations');
+                } else {
+                    // 登录失败
+                    elements.loginError.classList.remove('hidden');
+                }
+            });
+
+            // 退出登录
+            elements.logoutBtn.addEventListener('click', function() {
+                Auth.logout();
+                elements.loginModal.classList.remove('hidden');
+                elements.mainNav.classList.add('hidden');
+                elements.mainContent.classList.add('hidden');
+                elements.loginForm.reset();
+                elements.loginError.classList.add('hidden');
+            });
+
+            // 导航按钮事件
+            elements.stationsBtn.addEventListener('click', () => {
+                currentPage.stations = 1;
+                UI.switchSection('stations');
+            });
+
+            elements.productsBtn.addEventListener('click', () => {
+                currentPage.products = 1;
+                UI.switchSection('products');
+            });
+
+            elements.repairsBtn.addEventListener('click', () => {
+                currentPage.repairs = 1;
+                UI.switchSection('repairs');
+            });
+
+            // 分页按钮事件
+            elements.prevStationsBtn.addEventListener('click', () => {
+                if (currentPage.stations > 1) {
+                    currentPage.stations--;
+                    UI.loadStationsData();
+                }
+            });
+
+            elements.nextStationsBtn.addEventListener('click', () => {
+                if (currentPage.stations < Math.ceil(Data.stations.length / pageSize)) {
+                    currentPage.stations++;
+                    UI.loadStationsData();
+                }
+            });
+
+            elements.prevProductsBtn.addEventListener('click', () => {
+                if (currentPage.products > 1) {
+                    currentPage.products--;
+                    UI.loadProductsData();
+                }
+            });
+
+            elements.nextProductsBtn.addEventListener('click', () => {
+                if (currentPage.products < Math.ceil(Data.products.length / pageSize)) {
+                    currentPage.products++;
+                    UI.loadProductsData();
+                }
+            });
+
+            elements.prevRepairsBtn.addEventListener('click', () => {
+                if (currentPage.repairs > 1) {
+                    currentPage.repairs--;
+                    UI.loadRepairsData();
+                }
+            });
+
+            elements.nextRepairsBtn.addEventListener('click', () => {
+                if (currentPage.repairs < Math.ceil(Data.repairs.length / pageSize)) {
+                    currentPage.repairs++;
+                    UI.loadRepairsData();
+                }
+            });
+
+            // 搜索按钮事件
+            elements.searchStationsBtn.addEventListener('click', () => {
+                const filters = {
+                    '油站ID': elements.stationIdSearch.value,
+                    '油站名称': elements.stationNameSearch.value,
+                    '行政区域': elements.stationRegionSearch.value
+                };
+
+                const filtered = Data.filterData(Data.stations, filters);
+                currentPage.stations = 1;
+                UI.loadStationsData(filtered);
+            });
+
+            elements.resetStationsBtn.addEventListener('click', () => {
+                elements.stationIdSearch.value = '';
+                elements.stationNameSearch.value = '';
+                elements.stationRegionSearch.value = '';
+
+                currentPage.stations = 1;
+                UI.loadStationsData();
+            });
+
+            elements.searchProductsBtn.addEventListener('click', () => {
+                const filters = {
+                    '产品序列号': elements.productIdSearch.value,
+                    '类别描述': elements.productTypeSearch.value,
+                    '产品线': elements.productLineSearch.value,
+                    '安装油站': elements.productStationSearch.value
+                };
+
+                const filtered = Data.filterData(Data.products, filters);
+                currentPage.products = 1;
+                UI.loadProductsData(filtered);
+            });
+
+            elements.resetProductsBtn.addEventListener('click', () => {
+                elements.productIdSearch.value = '';
+                elements.productTypeSearch.value = '';
+                elements.productLineSearch.value = '';
+                elements.productStationSearch.value = '';
+
+                currentPage.products = 1;
+                UI.loadProductsData();
+            });
+
+            elements.searchRepairsBtn.addEventListener('click', () => {
+                const filters = {
+                    '维修订单号': elements.repairIdSearch.value,
+                    '报修产品序列号': elements.repairProductSearch.value,
+                    '报修油站': elements.repairStationSearch.value,
+                    '维修进度': elements.repairStatusSearch.value
+                };
+
+                const filtered = Data.filterData(Data.repairs, filters);
+                currentPage.repairs = 1;
+                UI.loadRepairsData(filtered);
+            });
+
+            elements.resetRepairsBtn.addEventListener('click', () => {
+                elements.repairIdSearch.value = '';
+                elements.repairProductSearch.value = '';
+                elements.repairStationSearch.value = '';
+                elements.repairStatusSearch.value = '';
+
+                currentPage.repairs = 1;
+                UI.loadRepairsData();
+            });
+
+            // 关闭详情模态框
+            elements.closeModalBtn.addEventListener('click', () => {
+                UI.hideModal('detailModal');
+            });
+
+            // 油站表格事件委托 - 查看详情和新增产品
+            elements.stationsTableBody.addEventListener('click', (e) => {
+                // 查看详情
+                const viewBtn = e.target.closest('.view-detail');
+                if (viewBtn) {
+                    const type = viewBtn.dataset.type;
+                    const id = viewBtn.dataset.id;
+                    UI.showDetail(type, id);
+                }
+
+                // 新增产品
+                const addProductBtn = e.target.closest('.add-product');
+                if (addProductBtn && Auth.isAdmin()) {
+                    const stationId = addProductBtn.dataset.stationId;
+                    const stationName = addProductBtn.dataset.stationName;
+
+                    // 设置关联的油站ID
+                    elements.productStationId.value = stationId;
+                    // 清空表单
+                    elements.addProductForm.reset();
+                    // 显示弹窗
+                    UI.showModal('addProductModal');
+                }
+            });
+
+            // 产品表格事件委托 - 查看详情和新增维修
+            elements.productsTableBody.addEventListener('click', (e) => {
+                // 查看详情
+                const viewBtn = e.target.closest('.view-detail');
+                if (viewBtn) {
+                    const type = viewBtn.dataset.type;
+                    const id = viewBtn.dataset.id;
+                    UI.showDetail(type, id);
+                }
+
+                // 新增维修
+                const addRepairBtn = e.target.closest('.add-repair');
+                if (addRepairBtn && Auth.isAdmin()) {
+                    const productSerial = addRepairBtn.dataset.productSerial;
+                    const productType = addRepairBtn.dataset.productType;
+                    const stationId = addRepairBtn.dataset.stationId;
+
+                    // 设置关联的产品信息
+                    elements.repairProductSerial.value = productSerial;
+                    document.getElementById('repairProductType').value = productType;
+                    elements.newRepairStation.value = stationId;
+                    // 清空表单
+                    elements.addRepairForm.reset();
+                    // 显示弹窗
+                    UI.showModal('addRepairModal');
+                }
+            });
+
+            // 维修表格事件委托 - 查看详情和编辑状态
+            elements.repairsTableBody.addEventListener('click', (e) => {
+                // 查看详情
+                const viewBtn = e.target.closest('.view-detail');
+                if (viewBtn) {
+                    const type = viewBtn.dataset.type;
+                    const id = viewBtn.dataset.id;
+                    UI.showDetail(type, id);
+                }
+
+                // 编辑维修状态
+                const editRepairBtn = e.target.closest('.edit-repair');
+                if (editRepairBtn && Auth.isAdmin()) {
+                    const repairId = editRepairBtn.dataset.repairId;
+                    const status = editRepairBtn.dataset.status;
+
+                    // 设置维修ID和当前状态
+                    elements.editRepairId.value = repairId;
+                    elements.editRepairStatus.value = status;
+                    document.getElementById('editRepairDescription').value = '';
+                    // 显示弹窗
+                    UI.showModal('editRepairModal');
+                }
+            });
+
+            // 新增产品表单提交
+            elements.addProductForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const stationId = elements.productStationId.value;
+                const station = Data.stations.find(s => s['油站ID'] === stationId);
+
+                const newProduct = {
+                    "产品序列号": document.getElementById('newProductSerial').value,
+                    "产品类别码": document.getElementById('newProductTypeCode').value,
+                    "类别描述": document.getElementById('newProductTypeDesc').value,
+                    "产品线": document.getElementById('newProductLine').value,
+                    "安装供应商": "默认供应商",
+                    "安装日期": document.getElementById('newProductInstallDate').value,
+                    "安装油站": stationId,
+                    "安装人员": "系统新增",
+                    "质保到期日": document.getElementById('newProductWarrantyDate').value,
+                    "油站名称": station ? station['油站名称'] : ''
+                };
+
+                // 添加产品
+                Data.addProduct(newProduct);
+                // 隐藏弹窗
+                UI.hideModal('addProductModal');
+                // 切换到产品管理并刷新
+                UI.switchSection('products');
+            });
+
+            // 取消新增产品
+            elements.closeAddProductModal.addEventListener('click', () => {
+                UI.hideModal('addProductModal');
+            });
+
+            elements.cancelAddProduct.addEventListener('click', () => {
+                UI.hideModal('addProductModal');
+            });
+
+            // 新增维修表单提交
+            elements.addRepairForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const productSerial = elements.repairProductSerial.value;
+                const productType = document.getElementById('repairProductType').value;
+                const stationId = elements.newRepairStation.value;
+                const station = Data.stations.find(s => s['油站ID'] === stationId);
+
+                const newRepair = {
+                    "维修订单号": document.getElementById('newRepairId').value,
+                    "申请维修时间": document.getElementById('newRepairDate').value,
+                    "报修油站": stationId,
+                    "报修产品序列号": productSerial,
+                    "维修服务商": "默认服务商",
+                    "故障类别": document.getElementById('newRepairFaultType').value,
+                    "故障描述": document.getElementById('newRepairDescription').value,
+                    "维修进度": document.getElementById('newRepairStatus').value,
+                    "是否换件": "否",
+                    "坏件收到时间": "",
+                    "产品类别": productType,
+                    "油站名称": station ? station['油站名称'] : ''
+                };
+
+                // 添加维修
+                Data.addRepair(newRepair);
+                // 隐藏弹窗
+                UI.hideModal('addRepairModal');
+                // 切换到维修管理并刷新
+                UI.switchSection('repairs');
+            });
+
+            // 取消新增维修
+            elements.closeAddRepairModal.addEventListener('click', () => {
+                UI.hideModal('addRepairModal');
+            });
+
+            elements.cancelAddRepair.addEventListener('click', () => {
+                UI.hideModal('addRepairModal');
+            });
+
+            // 编辑维修状态表单提交
+            elements.editRepairForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const repairId = elements.editRepairId.value;
+                const newStatus = elements.editRepairStatus.value;
+                const remark = document.getElementById('editRepairDescription').value;
+
+                // 更新维修状态
+                Data.updateRepairStatus(repairId, newStatus, remark);
+                // 隐藏弹窗
+                UI.hideModal('editRepairModal');
+                // 刷新维修列表
+                UI.loadRepairsData();
+            });
+
+            // 取消编辑维修状态
+            elements.closeEditRepairModal.addEventListener('click', () => {
+                UI.hideModal('editRepairModal');
+            });
+
+            elements.cancelEditRepair.addEventListener('click', () => {
+                UI.hideModal('editRepairModal');
+            });
+        }
+
+        // 初始化
+        function init() {
+            initStationDropdowns();
+            bindEvents();
+        }
+
+        // 暴露公共方法
+        return { init };
+    })();
+
+    // 页面加载完成后初始化系统
+    document.addEventListener('DOMContentLoaded', () => {
+        StationManagementSystem.init();
+    });
+</script>
+</body>
+</html>
